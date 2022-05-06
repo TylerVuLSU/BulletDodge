@@ -98,7 +98,7 @@ function endScreen() {
   fill(0);
   stroke(0);
   textSize(100);
-  text("Dodge The Bullet", 100, 100);
+  text("Bullet Dodge", 200, 100);
   textSize(75);
   text("Difficulty: ", 200, 200);
   text(difficulty, 550, 200);
@@ -128,7 +128,7 @@ function homeText() {
   rect(300, 450, 400, 100);
   fill(0);
   textSize(100);
-  text("Dodge The Bullet", 100, 100);
+  text("Bullet Dodge", 200, 100);
   textSize(80);
   text("Easy", 400, 225);
   text("Normal", 365, 380);
