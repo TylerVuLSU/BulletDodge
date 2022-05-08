@@ -69,6 +69,7 @@ function homeScreen() {
 function playingScreen() {
   score = timer - startTime;
   gameBorder();
+  leftSideBar();
   rightSidebar();
   movement();
   for(var i = 0; i < bulletArray.length; i++) {
@@ -79,6 +80,7 @@ function playingScreen() {
 
   user.draw();
   user.checkDeadTimer();
+  bombDisplay();
 
   if(!bulletAdded && (score % bulletTimer == 0)) {
     createBullet();
@@ -155,6 +157,32 @@ function gameBorder() {
   rect(300, 10, 400, 580);
 }
 
+function leftSideBar() {
+  fill(255);
+  rect(75, 50, 30, 30);
+  rect(45, 80, 30, 30);
+  rect(75, 80, 30, 30);
+  rect(105, 80, 30, 30);
+  rect(45, 130, 90, 30);
+  fill(0);
+  text("Keyboard Controls", 20, 25);
+  textSize(20);
+  fill(50);
+  text("Movement", 150, 90);
+  text("Bomb", 150, 150);
+  line(80, 75, 90, 55);
+  line(100, 75, 90, 55);
+  line(70, 85, 50, 95);
+  line(70, 105, 50, 95);
+  line(80, 85, 90, 105);
+  line(100, 85, 90, 105);
+  line(110, 85, 130, 95);
+  line(110, 105, 130, 95);
+  line(75, 140, 75, 150);
+  line(105, 140, 105, 150);
+  line(75, 150, 105, 150);
+}
+
 function rightSidebar() {
   fill(50);
   textSize(30);
@@ -180,10 +208,34 @@ function createBullet() {
 }
 
 function useBomb() {
+  var bulletsDestroyed = 0;
+  bombDisplayX = user.getX();
+  bombDisplayY = user.getY();
+  bombTimer = timer;
   for(var i = 0; i < bulletArray.length; i++) {
-    bulletArray[i].resetBullet();
+    if(bulletArray[i].inRangeOfBomb(user)) {
+      bulletArray.splice(i, 1);
+      i--;
+      bulletsDestroyed++;
+    }
   }
+
+  for(var i = 0; i < bulletsDestroyed / 2; i++) {
+    createBullet();
+  }
+
   numOfBombs--;
+}
+
+let bombDisplayX;
+let bombDisplayY;
+let bombTimer;
+function bombDisplay() {
+  if(bombTimer + 2 > timer) {
+    rectMode(CENTER);
+    fill(200, 0, 0 , 100);
+    rect(bombDisplayX, bombDisplayY, 300, 300);
+  }
 }
 
 //-------------------------------------------------------------------------------------
@@ -253,6 +305,12 @@ class player {
 
   draw() {
     rectMode(CENTER);
+    if(this.immune) {
+      fill(255, 255, 0, 100);
+    }
+    else {
+      fill(0);
+    }
     rect(this.x, this.y, 32, 32);
   }
 
@@ -287,13 +345,23 @@ class bullet {
   move() {
     this.y += this.speed;
     if(this.y > 587) {
-      this.resetBullet();
+      this.y = 13;
     }
   }
 
   resetBullet() {
-    this.y = 13;
+    this.y = random(13, 50);
     this.x = random(303, 697);
+  }
+
+  inRangeOfBomb(user) {
+    if((this.x > (user.getX() - 150)) && (this.x < (user.getX() + 150))
+          && (this.y > (user.getY() - 150)) && (this.y < (user.getY() + 150))) {
+      return true;
+    }
+    else {
+      return false;
+    }
   }
 
   collide(user) {
