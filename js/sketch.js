@@ -345,12 +345,12 @@ class bullet {
   move() {
     this.y += this.speed;
     if(this.y > 587) {
-      this.y = 13;
+      this.resetBullet();
     }
   }
 
   resetBullet() {
-    this.y = random(13, 50);
+    this.y = 13;
     this.x = random(303, 697);
   }
 
