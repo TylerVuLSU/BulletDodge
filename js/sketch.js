@@ -1,11 +1,13 @@
 let heartSprite;
 let bombSprite;
+let controllerImage;
+let keyboardImage;
 
 let timer;
 let startTime = 0;
 //gamestates {home, playing, end}
 let gameState = "home";
-//difficulties {easy, normal, hard}
+//difficulties {Easy, Normal, Hard}
 let difficulty = "Easy";
 
 let user;
@@ -21,16 +23,64 @@ let bulletAdded = false;
 let minSpeed;
 let maxSpeed;
 
+let serialPDM;
+let portName = 'COM3';
+let sensors;
+let usingController = true;
+let usedBomb = false;
+
+//-------------------------------------------------------------------------------------
+
+var bombSynth = new Tone.MembraneSynth({
+    pitchDecay  : 0.05 ,
+    octaves  : 10 ,
+    oscillator  : {
+    type  : "sine"
+  }  ,
+    envelope  : {
+      attack  : 0.001 ,
+      decay  : 0.4 ,
+      sustain  : 0.01 ,
+      release  : 1.4 ,
+      attackCurve  : "exponential"
+    }
+}).toDestination();
+
+var bombEffect = new Tone.Vibrato({
+	"frequency": 5,
+	"depth": 0.2,
+	"type": "sine",
+  "wet": 0.5
+});
+
+const hitSynth = new Tone.Synth().toDestination();
+const hitNoise = new Tone.Part(((time, value) => {
+	hitSynth.triggerAttackRelease(value.note, "8n", time);
+}), [{ time: 0, note: "B3"},
+	{ time: "0:0.5", note: "G3"},
+  {time: "0:1", note: "F3"}
+]);
+
 //-------------------------------------------------------------------------------------
 
 function preload() {
   heartSprite = loadImage("images/heart.png");
   bombSprite = loadImage("images/bomb.png");
+  controllerImage = loadImage("images/controller.png");
+  keyboardImage = loadImage("images/keyboard.png");
 }
 
 function setup() {
   createCanvas(1000, 600);
   user = new player(numOfLives, numOfBombs);
+
+  bombSynth.connect(bombEffect);
+  Tone.Transport.start();
+
+  serialPDM = new PDMSerial(portName);
+  sensors = serialPDM.sensorData;
+
+  serialPDM.transmit("bombLED", 0);
 }
 
 function draw() {
@@ -46,7 +96,6 @@ function draw() {
   else if(gameState == "end") {
     endScreen();
   }
-  
 }
 
 //-------------------------------------------------------------------------------------
@@ -71,7 +120,9 @@ function playingScreen() {
   gameBorder();
   leftSideBar();
   rightSidebar();
-  movement();
+  allMovement();
+  if(usingController)
+    controllerBomb();
   for(var i = 0; i < bulletArray.length; i++) {
     bulletArray[i].move();
     bulletArray[i].draw();
@@ -113,6 +164,14 @@ function endScreen() {
   fill(0);
   stroke(0);
   text("Try Again", 245, 420);
+  
+  if(frameCount % 10 == 0) {
+    serialPDM.transmit("bombLED", 1);
+  }
+  else if(frameCount % 10 == 5) {
+    serialPDM.transmit("bombLED", 0);
+  } 
+
   if(mouseIsPressed) {
     if((mouseX > 225) && (mouseX < 585) && (mouseY > 350) && (mouseY < 450)) {
       location.reload();
@@ -135,6 +194,7 @@ function homeText() {
   text("Easy", 400, 225);
   text("Normal", 365, 380);
   text("Hard", 400, 525);
+  controllerType();
 }
 
 function homeScreenSelection(newDiff, startingBulletCount, newBulletTimer, newMinSpeed, newMaxSpeed) {
@@ -148,6 +208,18 @@ function homeScreenSelection(newDiff, startingBulletCount, newBulletTimer, newMi
   }
 }
 
+function controllerType() {
+  if(usingController) {
+    fill(255);
+    rect(925, 525, 50, 50);
+    image(controllerImage, 925, 525, 50, 50, 0, 0, 225, 225);
+  }
+  else {
+    fill(255);
+    rect(925, 525, 50, 50);
+    image(keyboardImage, 925, 525, 50, 50, 50, 0, 700, 533);
+  }
+}
 //-------------------------------------------------------------------------------------
 
 function gameBorder() {
@@ -231,6 +303,7 @@ function useBomb() {
     createBullet();
   }
 
+  bombSynth.triggerAttackRelease("C1", "8n");
   numOfBombs--;
 }
 
@@ -247,6 +320,58 @@ function bombDisplay() {
 
 //-------------------------------------------------------------------------------------
 
+function controllerMovement() {
+  if(sensors.a0 < 300) {
+    xMovement = -2;
+  }
+  if(sensors.a0 > 700) {
+    xMovement = 2;
+  }
+
+  if(sensors.a1 < 300) {
+    yMovement = -2;
+  }
+  if(sensors.a1 > 700) {
+    yMovement = 2;
+  }
+
+  if(sensors.a0 >= 300 && sensors.a0 <= 700) {
+    xMovement = 0;
+  }
+  if(sensors.a1 >= 300 && sensors.a1 <= 700) {
+    yMovement = 0;
+  }
+}
+
+function controllerBomb() {
+  if(sensors.p7 == 1) {
+    if(!usedBomb && numOfBombs > 0) {
+      usedBomb = true;
+      useBomb();
+      serialPDM.transmit("bombLED", 1);
+
+    }
+  }
+  else {
+    usedBomb = false;
+    if(frameCount % 10 == 0)
+      serialPDM.transmit("bombLED", 0);
+  }
+}
+
+//-------------------------------------------------------------------------------------
+
+function allMovement() {
+  if(usingController) {
+    controllerMovement();
+  }
+  else {
+    movement();
+  }
+
+  user.move(xMovement, yMovement);
+}
+
 function movement() {
   if(keyIsDown(LEFT_ARROW))
     xMovement = -2;
@@ -257,12 +382,18 @@ function movement() {
     yMovement = 2;
   if(keyIsDown(UP_ARROW))
     yMovement = -2;
+}
 
-  user.move(xMovement, yMovement);
+function mousePressed() {
+  if(gameState == "home") {
+    if(mouseX > 925 && mouseX < 975 && mouseY > 525 && mouseY < 575) {
+      usingController = !usingController;
+    }
+  }
 }
 
 function keyPressed() {
-  if(gameState == "playing" && keyCode == 32 && numOfBombs > 0) {
+  if(!usingController && gameState == "playing" && keyCode == 32 && numOfBombs > 0) {
     useBomb();
   }
 }
@@ -293,7 +424,11 @@ class player {
 
   playerHit(newTimer) {
     this.immune = true;
-    this.deadTimer = newTimer
+    this.deadTimer = newTimer;
+
+    Tone.Transport.stop();
+    hitNoise.start();
+    Tone.Transport.start();
   }
 
   checkDeadTimer() {
