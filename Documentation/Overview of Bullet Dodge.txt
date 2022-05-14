@@ -1,0 +1,20 @@
+Tyler Vu
+CSC 2463 : Programming Digital Media
+
+Video Demo : https://youtube.com/shorts/Cof4bX5i5Ds?feature=share
+
+A simple game where you have to dodge the raining bullets by either using the arrow keys or the arduino joystick based on what controller settings were selected.
+
+Safety mechanic added where you click either the space bar or the arduino button to destroy the bullets around your player model.
+
+3 Different difficulties are added were they change the starting amount of bullets, the speed at which they come down, and the time in between for the adding of bullets.
+
+The added arduino support allows the joystick and buttons to control the player model and the LED allows to see the usage of the bomb and ending screen.
+
+The added sounds from Tone.js plays a sound when the bomb is used and when the player model is hit from a bullet.
+
+
+Future Development
+
+For the future, maybe adjust the difficulties to be more enjoyable.
+Add different playable players in terms of hp, health, speed, and possibly a different ability.
