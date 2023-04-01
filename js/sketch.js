@@ -26,7 +26,7 @@ let maxSpeed;
 let serialPDM;
 let portName = 'COM3';
 let sensors;
-let usingController = true;
+let usingController = false;
 let usedBomb = false;
 
 //-------------------------------------------------------------------------------------
